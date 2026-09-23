@@ -97,6 +97,10 @@ dialog::backdrop { background: rgba(7,26,50,.58); backdrop-filter: blur(2px); }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 .form-grid label { display: grid; gap: 7px; color: var(--navy); font-size: 14px; font-weight: 700; }
 .form-grid label.full { grid-column: 1 / -1; }
+.form-grid .all-day-option { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 9px 11px; background: #f4f8fc; border: 1px solid #cbd5e0; border-radius: 8px; cursor: pointer; }
+.form-grid .all-day-option input { width: 18px; min-height: 18px; margin: 0; accent-color: var(--blue); }
+.form-grid .time-field { transition: opacity .2s ease; }
+.form-grid .time-field.disabled { opacity: .45; }
 .form-grid input, .form-grid select, .form-grid textarea { width: 100%; min-height: 44px; padding: 9px 11px; color: var(--ink); background: white; border: 1px solid #cbd5e0; border-radius: 8px; outline: none; }
 .form-grid textarea { resize: vertical; }.form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(39,103,168,.12); }
 .dialog-actions { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; margin-top: 22px; }

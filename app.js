@@ -61,7 +61,7 @@
           toast("共有された予定表を読み込みました");
         }
       }
-      state.events = state.events.map(event => ({ ...event, category: normalizeCategory(event.category) }));
+      state.events = state.events.map(event => ({ ...event, category: normalizeCategory(event.category), allDay: event.allDay === true }));
     } catch (error) { console.warn("保存データを読み込めませんでした", error); }
   }
   function save() {
@@ -86,7 +86,10 @@
     document.querySelectorAll("[data-view]").forEach(btn => btn.classList.toggle("active", btn.dataset.view === state.view));
     save();
   }
-  function eventsFor(key) { return state.events.filter(event => event.date === key).sort((a,b) => (a.startTime || "99:99").localeCompare(b.startTime || "99:99")); }
+  function eventsFor(key) { return state.events.filter(event => event.date === key).sort((a,b) => {
+    if (Boolean(a.allDay) !== Boolean(b.allDay)) return a.allDay ? -1 : 1;
+    return (a.startTime || "99:99").localeCompare(b.startTime || "99:99");
+  }); }
   function renderCalendar() {
     const holidays = japaneseHolidays(state.year);
     const days = visibleDays(); const grid = $("calendarView"); grid.innerHTML = ""; grid.className = "calendar-view calendar-grid"; grid.style.setProperty("--columns", days.length);
@@ -103,7 +106,7 @@
         cell.querySelector(".add-mini").addEventListener("click", () => openDialog(key));
         dayEvents.forEach(event => {
           const chip = document.createElement("button"); chip.className = `event-chip ${event.category}`;
-          chip.textContent = `${event.startTime ? event.startTime + " " : ""}${event.title}`; chip.title = [event.title, event.place, event.note].filter(Boolean).join(" / ");
+          chip.textContent = `${event.allDay ? "終日 " : event.startTime ? event.startTime + " " : ""}${event.title}`; chip.title = [event.title, event.place, event.note].filter(Boolean).join(" / ");
           chip.addEventListener("click", () => openDialog(key, event.id)); cell.append(chip);
         }); grid.append(cell);
       } cursor.setDate(cursor.getDate() + 1);
@@ -115,12 +118,13 @@
     for (let day = 1; day <= lastDay; day++) {
       const date = new Date(state.year, state.month, day); const dow = date.getDay(); const key = dateKey(date); const events = eventsFor(key);
       if ((!state.settings.showSunday && dow === 0) || (!state.settings.showSaturday && dow === 6) || (!state.settings.showEmpty && events.length === 0)) continue;
-      const rows = events.length ? events : [{ id: null, title: "", startTime: "", endTime: "", place: "", note: "", category: "practice" }];
+      const rows = events.length ? events : [{ id: null, title: "", startTime: "", endTime: "", allDay: false, place: "", note: "", category: "practice" }];
       rows.forEach((event, index) => {
         const holidayName = holidays.get(key); const dayClass = holidayName || dow === 0 ? "holiday" : dow === 6 ? "saturday" : "";
         const row = document.createElement("div"); row.className = `list-row ${dayClass}`;
         const title = event.id ? `<button class="list-title-button">${escapeHtml(event.title)}</button>` : "";
-        row.innerHTML = `<div class="list-date">${index === 0 ? `${day}<small>${dayLabels[dow]}曜日</small>${holidayName && state.settings.showHolidayNames ? `<span class="holiday-name">${escapeHtml(holidayName)}</span>` : ""}` : ""}</div><div>${escapeHtml([event.startTime, event.endTime].filter(Boolean).join("–"))}</div><div>${title}</div><div>${escapeHtml(event.place)}</div><div>${escapeHtml(event.note)}</div>`;
+        const timeText = event.allDay ? "終日" : [event.startTime, event.endTime].filter(Boolean).join("–");
+        row.innerHTML = `<div class="list-date">${index === 0 ? `${day}<small>${dayLabels[dow]}曜日</small>${holidayName && state.settings.showHolidayNames ? `<span class="holiday-name">${escapeHtml(holidayName)}</span>` : ""}` : ""}</div><div>${escapeHtml(timeText)}</div><div>${title}</div><div>${escapeHtml(event.place)}</div><div>${escapeHtml(event.note)}</div>`;
         if (event.id) row.querySelector("button").addEventListener("click", () => openDialog(key, event.id));
         list.append(row); shown++;
       });
@@ -130,17 +134,23 @@
   function openDialog(date = dateKey(new Date(state.year, state.month, 1)), id = null) {
     const event = state.events.find(item => item.id === id);
     $("eventForm").reset(); $("eventId").value = event?.id || ""; $("eventDate").value = event?.date || date; $("eventTitle").value = event?.title || "";
-    $("eventCategory").value = normalizeCategory(event?.category); $("startTime").value = event?.startTime || ""; $("endTime").value = event?.endTime || ""; $("eventPlace").value = event?.place || ""; $("eventNote").value = event?.note || "";
+    $("eventCategory").value = normalizeCategory(event?.category); $("allDay").checked = event?.allDay === true; $("startTime").value = event?.startTime || ""; $("endTime").value = event?.endTime || ""; $("eventPlace").value = event?.place || ""; $("eventNote").value = event?.note || ""; updateTimeFields();
     $("dialogTitle").textContent = event ? "予定を編集" : "予定を追加"; $("deleteEventButton").hidden = !event; $("eventDialog").showModal(); setTimeout(() => $("eventTitle").focus(), 50);
   }
   function saveEvent() {
-    const data = { id: $("eventId").value || uid(), date: $("eventDate").value, category: $("eventCategory").value, title: $("eventTitle").value.trim(), startTime: $("startTime").value, endTime: $("endTime").value, place: $("eventPlace").value.trim(), note: $("eventNote").value.trim() };
+    const allDay = $("allDay").checked;
+    const data = { id: $("eventId").value || uid(), date: $("eventDate").value, category: $("eventCategory").value, title: $("eventTitle").value.trim(), allDay, startTime: allDay ? "" : $("startTime").value, endTime: allDay ? "" : $("endTime").value, place: $("eventPlace").value.trim(), note: $("eventNote").value.trim() };
     const index = state.events.findIndex(item => item.id === data.id); if (index >= 0) state.events[index] = data; else state.events.push(data);
     const selected = new Date(`${data.date}T00:00:00`); state.year = selected.getFullYear(); state.month = selected.getMonth(); $("eventDialog").close(); render(); toast(index >= 0 ? "予定を更新しました" : "予定を追加しました");
   }
+  function updateTimeFields() {
+    const disabled = $("allDay").checked;
+    [$("startTime"), $("endTime")].forEach(input => { input.disabled = disabled; });
+    document.querySelectorAll(".time-field").forEach(label => label.classList.toggle("disabled", disabled));
+  }
   function deleteEvent() { const id = $("eventId").value; state.events = state.events.filter(item => item.id !== id); $("eventDialog").close(); render(); toast("予定を削除しました"); }
   function exportData() { const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `活動予定表-${state.year}-${String(state.month + 1).padStart(2,"0")}.json`; link.click(); URL.revokeObjectURL(url); toast("データを書き出しました"); }
-  function importData(file) { const reader = new FileReader(); reader.onload = () => { try { const data = JSON.parse(reader.result); if (!Array.isArray(data.events)) throw new Error(); Object.assign(state, data, { settings: { ...state.settings, ...(data.settings || {}) } }); state.events = state.events.map(event => ({ ...event, category: normalizeCategory(event.category) })); render(); toast("データを読み込みました"); } catch { alert("このファイルは読み込めませんでした。"); } }; reader.readAsText(file); }
+  function importData(file) { const reader = new FileReader(); reader.onload = () => { try { const data = JSON.parse(reader.result); if (!Array.isArray(data.events)) throw new Error(); Object.assign(state, data, { settings: { ...state.settings, ...(data.settings || {}) } }); state.events = state.events.map(event => ({ ...event, category: normalizeCategory(event.category), allDay: event.allDay === true })); render(); toast("データを読み込みました"); } catch { alert("このファイルは読み込めませんでした。"); } }; reader.readAsText(file); }
   async function share() {
     const monthEvents = state.events.filter(e => { const d = new Date(`${e.date}T00:00:00`); return d.getFullYear() === state.year && d.getMonth() === state.month; });
     const payload = { year: state.year, month: state.month, clubName: state.clubName, footerNote: state.footerNote, events: monthEvents };
@@ -164,6 +174,7 @@
     $("clubName").oninput = e => { state.clubName = e.target.value; parseClubName(); save(); };
     $("footerNote").oninput = e => { state.footerNote = e.target.textContent; save(); };
     $("closeDialog").onclick = $("cancelButton").onclick = () => $("eventDialog").close();
+    $("allDay").onchange = updateTimeFields;
     $("eventForm").addEventListener("submit", e => { e.preventDefault(); saveEvent(); }); $("deleteEventButton").onclick = deleteEvent;
     $("exportButton").onclick = exportData; $("importInput").onchange = e => e.target.files[0] && importData(e.target.files[0]);
     $("clearButton").onclick = () => { if (confirm("すべての予定を削除しますか？この操作は元に戻せません。")) { state.events = []; render(); toast("予定をすべて削除しました"); } };
@@ -171,7 +182,7 @@
   function registerWebMcp() {
     const context = document.modelContext; if (!context?.registerTool) return;
     context.registerTool({ name: "list_calendar_events", title: "活動予定を確認", description: "選択中の月の活動予定を一覧で返します。", inputSchema: { type: "object", properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, untrustedContentHint: false }, execute: async () => ({ year: state.year, month: state.month + 1, events: state.events.filter(e => e.date.startsWith(`${state.year}-${String(state.month + 1).padStart(2,"0")}`)) }) });
-    context.registerTool({ name: "create_calendar_event", title: "活動予定を追加", description: "吹奏楽部の活動予定を追加し、画面と端末保存データを更新します。", inputSchema: { type: "object", properties: { date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" }, title: { type: "string", minLength: 1 }, category: { type: "string", enum: ["practice","event","restricted"] }, startTime: { type: "string" }, endTime: { type: "string" }, place: { type: "string" }, note: { type: "string" } }, required: ["date","title","category"], additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: false }, execute: async input => { if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date) || !input.title?.trim() || !categoryLabels[input.category]) throw new Error("入力内容が正しくありません"); const event = { id: uid(), date: input.date, title: input.title.trim(), category: input.category, startTime: input.startTime || "", endTime: input.endTime || "", place: input.place || "", note: input.note || "" }; state.events.push(event); render(); return { created: true, event }; } });
+    context.registerTool({ name: "create_calendar_event", title: "活動予定を追加", description: "吹奏楽部の活動予定を追加し、画面と端末保存データを更新します。", inputSchema: { type: "object", properties: { date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" }, title: { type: "string", minLength: 1 }, category: { type: "string", enum: ["practice","event","restricted"] }, allDay: { type: "boolean" }, startTime: { type: "string" }, endTime: { type: "string" }, place: { type: "string" }, note: { type: "string" } }, required: ["date","title","category"], additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: false }, execute: async input => { if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date) || !input.title?.trim() || !categoryLabels[input.category]) throw new Error("入力内容が正しくありません"); const allDay = input.allDay === true; const event = { id: uid(), date: input.date, title: input.title.trim(), category: input.category, allDay, startTime: allDay ? "" : input.startTime || "", endTime: allDay ? "" : input.endTime || "", place: input.place || "", note: input.note || "" }; state.events.push(event); render(); return { created: true, event }; } });
   }
   load(); bind(); render(); registerWebMcp();
 })();
