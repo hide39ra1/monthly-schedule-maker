@@ -6,7 +6,7 @@
   const initial = new Date();
   const state = {
     year: initial.getFullYear(), month: initial.getMonth(), view: "calendar",
-    settings: { showSunday: true, showSaturday: true, showEmpty: true },
+    settings: { showSunday: true, showSaturday: true, showHolidayNames: true, showEmpty: true },
     clubName: "吹奏楽部 活動予定表", footerNote: "※予定は変更になる場合があります。最新の連絡を確認してください。", events: []
   };
 
@@ -78,7 +78,7 @@
   function visibleDays() { return dayLabels.map((label, index) => ({ label, index })).filter(d => state.settings.showSunday || d.index !== 0).filter(d => state.settings.showSaturday || d.index !== 6); }
   function render() {
     $("clubName").value = state.clubName; $("footerNote").textContent = state.footerNote;
-    $("showSunday").checked = state.settings.showSunday; $("showSaturday").checked = state.settings.showSaturday; $("showEmpty").checked = state.settings.showEmpty;
+    $("showSunday").checked = state.settings.showSunday; $("showSaturday").checked = state.settings.showSaturday; $("showHolidayNames").checked = state.settings.showHolidayNames; $("showEmpty").checked = state.settings.showEmpty;
     const monthText = `${state.year}年 ${state.month + 1}月`;
     $("monthLabel").textContent = monthText; $("paperMonth").textContent = monthText; $("monthPicker").value = `${state.year}-${String(state.month + 1).padStart(2, "0")}`;
     parseClubName(); renderCalendar(); renderList(); document.body.classList.toggle("list-mode", state.view === "list");
@@ -99,7 +99,7 @@
         const key = dateKey(cursor); const dayEvents = eventsFor(key); const cell = document.createElement("div");
         const holidayName = holidays.get(key); const dayClass = holidayName || cursor.getDay() === 0 ? "holiday" : cursor.getDay() === 6 ? "saturday" : "";
         cell.className = `day-cell ${dayClass} ${cursor.getMonth() !== state.month ? "outside" : ""} ${key === today ? "today" : ""}`;
-        cell.innerHTML = `<div class="day-number"><span>${cursor.getDate()}${holidayName ? ` <small>${escapeHtml(holidayName)}</small>` : ""}</span><button class="add-mini" aria-label="${key}に予定を追加">＋</button></div>`;
+        cell.innerHTML = `<div class="day-number"><span>${cursor.getDate()}${holidayName && state.settings.showHolidayNames ? ` <small>${escapeHtml(holidayName)}</small>` : ""}</span><button class="add-mini" aria-label="${key}に予定を追加">＋</button></div>`;
         cell.querySelector(".add-mini").addEventListener("click", () => openDialog(key));
         dayEvents.forEach(event => {
           const chip = document.createElement("button"); chip.className = `event-chip ${event.category}`;
@@ -120,7 +120,7 @@
         const holidayName = holidays.get(key); const dayClass = holidayName || dow === 0 ? "holiday" : dow === 6 ? "saturday" : "";
         const row = document.createElement("div"); row.className = `list-row ${dayClass}`;
         const title = event.id ? `<button class="list-title-button">${escapeHtml(event.title)}</button>` : "";
-        row.innerHTML = `<div class="list-date">${index === 0 ? `${day}<small>${dayLabels[dow]}曜日</small>${holidayName ? `<span class="holiday-name">${escapeHtml(holidayName)}</span>` : ""}` : ""}</div><div>${escapeHtml([event.startTime, event.endTime].filter(Boolean).join("–"))}</div><div>${title}</div><div>${escapeHtml(event.place)}</div><div>${escapeHtml(event.note)}</div>`;
+        row.innerHTML = `<div class="list-date">${index === 0 ? `${day}<small>${dayLabels[dow]}曜日</small>${holidayName && state.settings.showHolidayNames ? `<span class="holiday-name">${escapeHtml(holidayName)}</span>` : ""}` : ""}</div><div>${escapeHtml([event.startTime, event.endTime].filter(Boolean).join("–"))}</div><div>${title}</div><div>${escapeHtml(event.place)}</div><div>${escapeHtml(event.note)}</div>`;
         if (event.id) row.querySelector("button").addEventListener("click", () => openDialog(key, event.id));
         list.append(row); shown++;
       });
@@ -160,7 +160,7 @@
     $("monthPicker").onchange = (e) => { const [year, month] = e.target.value.split("-").map(Number); state.year = year; state.month = month - 1; render(); };
     $("addEventButton").onclick = () => openDialog(); $("printButton").onclick = printSchedule; $("shareButton").onclick = share;
     document.querySelectorAll("[data-view]").forEach(btn => btn.onclick = () => { state.view = btn.dataset.view; render(); });
-    ["showSunday","showSaturday","showEmpty"].forEach(id => $(id).onchange = e => { state.settings[id] = e.target.checked; render(); });
+    ["showSunday","showSaturday","showHolidayNames","showEmpty"].forEach(id => $(id).onchange = e => { state.settings[id] = e.target.checked; render(); });
     $("clubName").oninput = e => { state.clubName = e.target.value; parseClubName(); save(); };
     $("footerNote").oninput = e => { state.footerNote = e.target.textContent; save(); };
     $("closeDialog").onclick = $("cancelButton").onclick = () => $("eventDialog").close();

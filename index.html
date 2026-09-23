@@ -6,7 +6,7 @@
   <meta name="description" content="吹奏楽部の月間活動予定を作成し、共有・PDF保存できるカレンダーアプリ" />
   <title>吹奏楽部 活動予定表</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d2b52'/%3E%3Cpath d='M19 42c0-7 7-9 13-6V17l18-4v25c0 9-15 12-15 3 0-7 7-9 12-6V21l-12 3v17c0 9-16 11-16 1z' fill='%23e8b64b'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="./styles.css?v=20260923-activity-types" />
+  <link rel="stylesheet" href="./styles.css?v=20260923-holiday-labels" />
 </head>
 <body>
   <div class="app-shell">
@@ -48,6 +48,7 @@
             <h2>表示設定</h2>
             <label class="switch-row"><span>日曜日を表示</span><input type="checkbox" id="showSunday" checked /></label>
             <label class="switch-row"><span>土曜日を表示</span><input type="checkbox" id="showSaturday" checked /></label>
+            <label class="switch-row"><span>祝日名を表示</span><input type="checkbox" id="showHolidayNames" checked /></label>
             <label class="switch-row"><span>予定のない日を表示</span><input type="checkbox" id="showEmpty" checked /></label>
           </div>
           <div class="panel legend-panel">
@@ -110,6 +111,6 @@
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="./app.js?v=20260923-activity-types"></script>
+  <script src="./app.js?v=20260923-holiday-labels"></script>
 </body>
 </html>
