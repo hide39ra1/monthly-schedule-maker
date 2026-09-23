@@ -159,7 +159,7 @@
   }
   function printSchedule() {
     let style = $("printPageStyle"); if (!style) { style = document.createElement("style"); style.id = "printPageStyle"; document.head.append(style); }
-    style.textContent = `@page { size: A4 ${state.view === "list" ? "portrait" : "landscape"}; margin: 9mm; }`;
+    style.textContent = `@page { size: A4 ${state.view === "list" ? "portrait" : "landscape"}; margin: 7mm; }`;
     window.print();
   }
   function bind() {
