@@ -6,7 +6,7 @@
   <meta name="description" content="吹奏楽部の月間活動予定を作成し、共有・PDF保存できるカレンダーアプリ" />
   <title>吹奏楽部 活動予定表</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d2b52'/%3E%3Cpath d='M19 42c0-7 7-9 13-6V17l18-4v25c0 9-15 12-15 3 0-7 7-9 12-6V21l-12 3v17c0 9-16 11-16 1z' fill='%23e8b64b'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="./styles.css?v=20260923-1815" />
+  <link rel="stylesheet" href="./styles.css?v=20260923-activity-types" />
 </head>
 <body>
   <div class="app-shell">
@@ -52,10 +52,9 @@
           </div>
           <div class="panel legend-panel">
             <h2>活動区分</h2>
-            <div class="legend"><i class="dot rehearsal"></i>通常練習</div>
-            <div class="legend"><i class="dot ensemble"></i>合奏・パート練習</div>
-            <div class="legend"><i class="dot performance"></i>本番・行事</div>
-            <div class="legend"><i class="dot off"></i>休み</div>
+            <div class="legend"><i class="dot practice"></i>演奏練習</div>
+            <div class="legend"><i class="dot event"></i>本番・行事等</div>
+            <div class="legend"><i class="dot restricted"></i>入校制限</div>
           </div>
           <div class="panel data-panel">
             <h2>データ管理</h2>
@@ -94,7 +93,7 @@
       <input type="hidden" id="eventId" />
       <div class="form-grid">
         <label>日付<input type="date" id="eventDate" required /></label>
-        <label>活動区分<select id="eventCategory"><option value="rehearsal">通常練習</option><option value="ensemble">合奏・パート練習</option><option value="performance">本番・行事</option><option value="off">休み</option></select></label>
+        <label>活動区分<select id="eventCategory"><option value="practice">演奏練習</option><option value="event">本番・行事等</option><option value="restricted">入校制限</option></select></label>
         <label class="full">予定名<input type="text" id="eventTitle" maxlength="60" placeholder="例：全体合奏" required /></label>
         <label>開始<input type="time" id="startTime" /></label>
         <label>終了<input type="time" id="endTime" /></label>
@@ -111,6 +110,6 @@
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="./app.js?v=20260923-1815"></script>
+  <script src="./app.js?v=20260923-activity-types"></script>
 </body>
 </html>

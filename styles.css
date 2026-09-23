@@ -46,7 +46,7 @@ button { cursor: pointer; }
 .switch-row input { width: 19px; height: 19px; accent-color: var(--blue); }
 .legend { display: flex; align-items: center; gap: 10px; min-height: 34px; font-size: 14px; }
 .dot { width: 9px; height: 9px; border-radius: 50%; }
-.dot.rehearsal { background: #2a6ea8; }.dot.ensemble { background: #8663a5; }.dot.performance { background: #bd7130; }.dot.off { background: #7a8793; }
+.dot.practice { background: #2a6ea8; }.dot.event { background: #bd7130; }.dot.restricted { background: #9c4051; }
 .data-panel { display: grid; gap: 8px; }
 .wide-button { display: grid; place-items: center; width: 100%; padding: 0 12px; color: var(--navy); background: #f7f9fb; border-color: var(--line); font-size: 14px; font-weight: 700; }
 .file-button input { display: none; }
@@ -72,7 +72,7 @@ button { cursor: pointer; }
 .day-number .add-mini { opacity: 0; color: var(--blue); background: transparent; border: 0; font-family: sans-serif; font-size: 18px; }
 .day-cell:hover .add-mini { opacity: 1; }
 .event-chip { display: block; width: 100%; margin: 4px 0 0; padding: 5px 6px; overflow: hidden; color: var(--ink); background: #e9f2fa; border: 0; border-left: 3px solid #2a6ea8; border-radius: 4px; text-align: left; font-size: 12px; line-height: 1.25; white-space: nowrap; text-overflow: ellipsis; }
-.event-chip.ensemble { background: #f1eaf7; border-left-color: #8663a5; }.event-chip.performance { background: #fff0df; border-left-color: #bd7130; }.event-chip.off { background: #edf0f2; border-left-color: #7a8793; }
+.event-chip.practice { background: #e9f2fa; border-left-color: #2a6ea8; }.event-chip.event { background: #fff0df; border-left-color: #bd7130; }.event-chip.restricted { background: #fae9ed; border-left-color: #9c4051; }
 .list-view { border-top: 1px solid var(--line); }
 .list-row { display: grid; grid-template-columns: 98px 110px minmax(180px,1.45fr) minmax(110px,.8fr) minmax(140px,1fr); align-items: stretch; border-bottom: 1px solid var(--line); }
 .list-row > div { min-height: 48px; display: flex; align-items: center; padding: 8px 10px; border-right: 1px solid var(--line); font-size: 14px; }

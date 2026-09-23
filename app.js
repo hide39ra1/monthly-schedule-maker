@@ -1,6 +1,6 @@
 (() => {
   const STORAGE_KEY = "brass-calendar-v1";
-  const categoryLabels = { rehearsal: "通常練習", ensemble: "合奏・パート", performance: "本番・行事", off: "休み" };
+  const categoryLabels = { practice: "演奏練習", event: "本番・行事等", restricted: "入校制限" };
   const dayLabels = ["日", "月", "火", "水", "木", "金", "土"];
   const $ = (id) => document.getElementById(id);
   const initial = new Date();
@@ -16,6 +16,12 @@
   }
   function uid() { return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`; }
   function escapeHtml(value = "") { const div = document.createElement("div"); div.textContent = value; return div.innerHTML; }
+  function normalizeCategory(category) {
+    if (category === "rehearsal" || category === "ensemble" || category === "practice") return "practice";
+    if (category === "performance" || category === "event") return "event";
+    if (category === "off" || category === "restricted") return "restricted";
+    return "practice";
+  }
   function nthMonday(year, month, nth) {
     const first = new Date(year, month, 1); return 1 + ((8 - first.getDay()) % 7) + (nth - 1) * 7;
   }
@@ -55,6 +61,7 @@
           toast("共有された予定表を読み込みました");
         }
       }
+      state.events = state.events.map(event => ({ ...event, category: normalizeCategory(event.category) }));
     } catch (error) { console.warn("保存データを読み込めませんでした", error); }
   }
   function save() {
@@ -108,7 +115,7 @@
     for (let day = 1; day <= lastDay; day++) {
       const date = new Date(state.year, state.month, day); const dow = date.getDay(); const key = dateKey(date); const events = eventsFor(key);
       if ((!state.settings.showSunday && dow === 0) || (!state.settings.showSaturday && dow === 6) || (!state.settings.showEmpty && events.length === 0)) continue;
-      const rows = events.length ? events : [{ id: null, title: "", startTime: "", endTime: "", place: "", note: "", category: "rehearsal" }];
+      const rows = events.length ? events : [{ id: null, title: "", startTime: "", endTime: "", place: "", note: "", category: "practice" }];
       rows.forEach((event, index) => {
         const holidayName = holidays.get(key); const dayClass = holidayName || dow === 0 ? "holiday" : dow === 6 ? "saturday" : "";
         const row = document.createElement("div"); row.className = `list-row ${dayClass}`;
@@ -123,7 +130,7 @@
   function openDialog(date = dateKey(new Date(state.year, state.month, 1)), id = null) {
     const event = state.events.find(item => item.id === id);
     $("eventForm").reset(); $("eventId").value = event?.id || ""; $("eventDate").value = event?.date || date; $("eventTitle").value = event?.title || "";
-    $("eventCategory").value = event?.category || "rehearsal"; $("startTime").value = event?.startTime || ""; $("endTime").value = event?.endTime || ""; $("eventPlace").value = event?.place || ""; $("eventNote").value = event?.note || "";
+    $("eventCategory").value = normalizeCategory(event?.category); $("startTime").value = event?.startTime || ""; $("endTime").value = event?.endTime || ""; $("eventPlace").value = event?.place || ""; $("eventNote").value = event?.note || "";
     $("dialogTitle").textContent = event ? "予定を編集" : "予定を追加"; $("deleteEventButton").hidden = !event; $("eventDialog").showModal(); setTimeout(() => $("eventTitle").focus(), 50);
   }
   function saveEvent() {
@@ -133,7 +140,7 @@
   }
   function deleteEvent() { const id = $("eventId").value; state.events = state.events.filter(item => item.id !== id); $("eventDialog").close(); render(); toast("予定を削除しました"); }
   function exportData() { const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `活動予定表-${state.year}-${String(state.month + 1).padStart(2,"0")}.json`; link.click(); URL.revokeObjectURL(url); toast("データを書き出しました"); }
-  function importData(file) { const reader = new FileReader(); reader.onload = () => { try { const data = JSON.parse(reader.result); if (!Array.isArray(data.events)) throw new Error(); Object.assign(state, data, { settings: { ...state.settings, ...(data.settings || {}) } }); render(); toast("データを読み込みました"); } catch { alert("このファイルは読み込めませんでした。"); } }; reader.readAsText(file); }
+  function importData(file) { const reader = new FileReader(); reader.onload = () => { try { const data = JSON.parse(reader.result); if (!Array.isArray(data.events)) throw new Error(); Object.assign(state, data, { settings: { ...state.settings, ...(data.settings || {}) } }); state.events = state.events.map(event => ({ ...event, category: normalizeCategory(event.category) })); render(); toast("データを読み込みました"); } catch { alert("このファイルは読み込めませんでした。"); } }; reader.readAsText(file); }
   async function share() {
     const monthEvents = state.events.filter(e => { const d = new Date(`${e.date}T00:00:00`); return d.getFullYear() === state.year && d.getMonth() === state.month; });
     const payload = { year: state.year, month: state.month, clubName: state.clubName, footerNote: state.footerNote, events: monthEvents };
@@ -164,7 +171,7 @@
   function registerWebMcp() {
     const context = document.modelContext; if (!context?.registerTool) return;
     context.registerTool({ name: "list_calendar_events", title: "活動予定を確認", description: "選択中の月の活動予定を一覧で返します。", inputSchema: { type: "object", properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, untrustedContentHint: false }, execute: async () => ({ year: state.year, month: state.month + 1, events: state.events.filter(e => e.date.startsWith(`${state.year}-${String(state.month + 1).padStart(2,"0")}`)) }) });
-    context.registerTool({ name: "create_calendar_event", title: "活動予定を追加", description: "吹奏楽部の活動予定を追加し、画面と端末保存データを更新します。", inputSchema: { type: "object", properties: { date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" }, title: { type: "string", minLength: 1 }, category: { type: "string", enum: ["rehearsal","ensemble","performance","off"] }, startTime: { type: "string" }, endTime: { type: "string" }, place: { type: "string" }, note: { type: "string" } }, required: ["date","title","category"], additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: false }, execute: async input => { if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date) || !input.title?.trim() || !categoryLabels[input.category]) throw new Error("入力内容が正しくありません"); const event = { id: uid(), date: input.date, title: input.title.trim(), category: input.category, startTime: input.startTime || "", endTime: input.endTime || "", place: input.place || "", note: input.note || "" }; state.events.push(event); render(); return { created: true, event }; } });
+    context.registerTool({ name: "create_calendar_event", title: "活動予定を追加", description: "吹奏楽部の活動予定を追加し、画面と端末保存データを更新します。", inputSchema: { type: "object", properties: { date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" }, title: { type: "string", minLength: 1 }, category: { type: "string", enum: ["practice","event","restricted"] }, startTime: { type: "string" }, endTime: { type: "string" }, place: { type: "string" }, note: { type: "string" } }, required: ["date","title","category"], additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: false }, execute: async input => { if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date) || !input.title?.trim() || !categoryLabels[input.category]) throw new Error("入力内容が正しくありません"); const event = { id: uid(), date: input.date, title: input.title.trim(), category: input.category, startTime: input.startTime || "", endTime: input.endTime || "", place: input.place || "", note: input.note || "" }; state.events.push(event); render(); return { created: true, event }; } });
   }
   load(); bind(); render(); registerWebMcp();
 })();
