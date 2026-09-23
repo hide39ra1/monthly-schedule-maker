@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="吹奏楽部の月間活動予定を作成し、共有・PDF保存できるカレンダーアプリ" />
+  <title>吹奏楽部 活動予定表</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d2b52'/%3E%3Cpath d='M19 42c0-7 7-9 13-6V17l18-4v25c0 9-15 12-15 3 0-7 7-9 12-6V21l-12 3v17c0 9-16 11-16 1z' fill='%23e8b64b'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">♪</div>
+        <div>
+          <p class="eyebrow">ENSEMBLE PLANNER</p>
+          <input id="clubName" class="club-name" value="吹奏楽部 活動予定表" aria-label="予定表のタイトル" />
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="button ghost" id="shareButton">共有リンク</button>
+        <button class="button primary" id="printButton">PDF保存・印刷</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="control-band" aria-label="予定表の操作">
+        <div class="month-control">
+          <button class="icon-button" id="prevMonth" aria-label="前の月">‹</button>
+          <button class="month-label" id="monthLabel" aria-label="年月を選択"></button>
+          <input type="month" id="monthPicker" aria-label="表示する年月" />
+          <button class="icon-button" id="nextMonth" aria-label="次の月">›</button>
+          <button class="text-button" id="todayButton">今月</button>
+        </div>
+        <div class="view-actions">
+          <div class="segmented" role="group" aria-label="表示形式">
+            <button class="active" data-view="calendar">カレンダー</button>
+            <button data-view="list">予定表</button>
+          </div>
+          <button class="button add" id="addEventButton">＋ 予定を追加</button>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <aside class="sidebar no-print">
+          <div class="panel">
+            <h2>表示設定</h2>
+            <label class="switch-row"><span>日曜日を表示</span><input type="checkbox" id="showSunday" checked /></label>
+            <label class="switch-row"><span>土曜日を表示</span><input type="checkbox" id="showSaturday" checked /></label>
+            <label class="switch-row"><span>予定のない日を表示</span><input type="checkbox" id="showEmpty" checked /></label>
+          </div>
+          <div class="panel legend-panel">
+            <h2>活動区分</h2>
+            <div class="legend"><i class="dot rehearsal"></i>通常練習</div>
+            <div class="legend"><i class="dot ensemble"></i>合奏・パート練習</div>
+            <div class="legend"><i class="dot performance"></i>本番・行事</div>
+            <div class="legend"><i class="dot off"></i>休み</div>
+          </div>
+          <div class="panel data-panel">
+            <h2>データ管理</h2>
+            <button class="wide-button" id="exportButton">データを書き出す</button>
+            <label class="wide-button file-button">データを読み込む<input type="file" id="importInput" accept="application/json" /></label>
+            <button class="wide-button danger-text" id="clearButton">すべて削除</button>
+          </div>
+          <p class="save-note">入力内容は、この端末のブラウザに保存されます。</p>
+        </aside>
+
+        <section class="calendar-paper" id="printArea">
+          <div class="paper-head">
+            <div>
+              <p class="school-name" id="printSchool">吹奏楽部</p>
+              <h1 id="printTitle">月間活動予定表</h1>
+            </div>
+            <div class="paper-month" id="paperMonth"></div>
+          </div>
+          <div id="calendarView" class="calendar-view"></div>
+          <div id="listView" class="list-view" hidden></div>
+          <footer class="paper-footer">
+            <p contenteditable="true" id="footerNote">※予定は変更になる場合があります。最新の連絡を確認してください。</p>
+            <p id="updatedAt"></p>
+          </footer>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="eventDialog">
+    <form method="dialog" id="eventForm">
+      <div class="dialog-head">
+        <div><p class="eyebrow">SCHEDULE</p><h2 id="dialogTitle">予定を追加</h2></div>
+        <button type="button" class="close-button" id="closeDialog" aria-label="閉じる">×</button>
+      </div>
+      <input type="hidden" id="eventId" />
+      <div class="form-grid">
+        <label>日付<input type="date" id="eventDate" required /></label>
+        <label>活動区分<select id="eventCategory"><option value="rehearsal">通常練習</option><option value="ensemble">合奏・パート練習</option><option value="performance">本番・行事</option><option value="off">休み</option></select></label>
+        <label class="full">予定名<input type="text" id="eventTitle" maxlength="60" placeholder="例：全体合奏" required /></label>
+        <label>開始<input type="time" id="startTime" /></label>
+        <label>終了<input type="time" id="endTime" /></label>
+        <label class="full">場所<input type="text" id="eventPlace" maxlength="80" placeholder="例：音楽室" /></label>
+        <label class="full">備考<textarea id="eventNote" rows="3" maxlength="240" placeholder="持ち物、対象パートなど"></textarea></label>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="button danger" id="deleteEventButton" hidden>削除</button>
+        <span></span>
+        <button type="button" class="button ghost" id="cancelButton">キャンセル</button>
+        <button type="submit" class="button primary">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="./app.js"></script>
+</body>
+</html>
