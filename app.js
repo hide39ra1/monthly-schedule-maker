@@ -9,6 +9,9 @@
     settings: { showSunday: true, showSaturday: true, showHolidayNames: true, showEmpty: true },
     clubName: "吹奏楽部 活動予定表", footerNote: "※予定は変更になる場合があります。最新の連絡を確認してください。", events: []
   };
+  const selectedDates = new Set();
+  let pickerYear = initial.getFullYear();
+  let pickerMonth = initial.getMonth();
 
   function dateKey(date) {
     const y = date.getFullYear(); const m = String(date.getMonth() + 1).padStart(2, "0"); const d = String(date.getDate()).padStart(2, "0");
@@ -131,17 +134,65 @@
     }
     if (!shown) list.insertAdjacentHTML("beforeend", '<div class="empty-state">この月の予定はまだありません。</div>');
   }
+  function sortedSelectedDates() { return [...selectedDates].sort(); }
+  function updateSelectedDatesSummary() {
+    const dates = sortedSelectedDates();
+    if (!dates.length) { $("selectedDatesSummary").textContent = "選択日なし"; return; }
+    const formatted = dates.map(key => { const [y,m,d] = key.split("-").map(Number); return `${y}/${m}/${d}`; });
+    $("selectedDatesSummary").textContent = `${dates.length}日選択：${formatted.join("、")}`;
+  }
+  function renderMultiCalendar() {
+    const calendar = $("multiCalendar"); const holidays = japaneseHolidays(pickerYear);
+    $("multiMonthLabel").textContent = `${pickerYear}年 ${pickerMonth + 1}月`;
+    calendar.innerHTML = dayLabels.map(label => `<div class="multi-weekday">${label}</div>`).join("");
+    const first = new Date(pickerYear, pickerMonth, 1); const lastDay = new Date(pickerYear, pickerMonth + 1, 0).getDate();
+    for (let blank = 0; blank < first.getDay(); blank++) calendar.insertAdjacentHTML("beforeend", '<div class="blank"></div>');
+    for (let day = 1; day <= lastDay; day++) {
+      const date = new Date(pickerYear, pickerMonth, day); const key = dateKey(date); const button = document.createElement("button");
+      const holiday = holidays.has(key); button.type = "button"; button.className = `multi-day ${holiday || date.getDay() === 0 ? "holiday" : date.getDay() === 6 ? "saturday" : ""} ${selectedDates.has(key) ? "selected" : ""}`;
+      button.textContent = day; button.setAttribute("aria-pressed", selectedDates.has(key)); button.title = holidays.get(key) || key;
+      button.onclick = () => { selectedDates.has(key) ? selectedDates.delete(key) : selectedDates.add(key); renderMultiCalendar(); };
+      calendar.append(button);
+    }
+    updateSelectedDatesSummary();
+  }
+  function toggleDatesByWeekdays(weekdays) {
+    const dates = []; const lastDay = new Date(pickerYear, pickerMonth + 1, 0).getDate();
+    for (let day = 1; day <= lastDay; day++) { const date = new Date(pickerYear, pickerMonth, day); if (weekdays.includes(date.getDay())) dates.push(dateKey(date)); }
+    const allSelected = dates.every(key => selectedDates.has(key)); dates.forEach(key => allSelected ? selectedDates.delete(key) : selectedDates.add(key)); renderMultiCalendar();
+  }
+  function updateMultipleDatesMode() {
+    const enabled = $("multipleDates").checked;
+    $("multiDatePanel").hidden = !enabled; $("eventDateLabel").textContent = enabled ? "基準日" : "日付";
+    if (enabled && !selectedDates.size && $("eventDate").value) selectedDates.add($("eventDate").value);
+    if (enabled) renderMultiCalendar();
+  }
+  function addDateRange() {
+    const startKey = $("rangeStart").value; const endKey = $("rangeEnd").value;
+    if (!startKey || !endKey) { alert("開始日と終了日を選択してください。"); return; }
+    const start = new Date(`${startKey}T00:00:00`); const end = new Date(`${endKey}T00:00:00`);
+    if (start > end) { alert("終了日は開始日以降にしてください。"); return; }
+    if ((end - start) / 86400000 >= 366) { alert("期間は366日以内で選択してください。"); return; }
+    const cursor = new Date(start); let count = 0;
+    while (cursor <= end && count < 366) { selectedDates.add(dateKey(cursor)); cursor.setDate(cursor.getDate() + 1); count++; }
+    pickerYear = start.getFullYear(); pickerMonth = start.getMonth(); renderMultiCalendar();
+  }
   function openDialog(date = dateKey(new Date(state.year, state.month, 1)), id = null) {
     const event = state.events.find(item => item.id === id);
-    $("eventForm").reset(); $("eventId").value = event?.id || ""; $("eventDate").value = event?.date || date; $("eventTitle").value = event?.title || "";
+    $("eventForm").reset(); selectedDates.clear(); $("eventId").value = event?.id || ""; $("eventDate").value = event?.date || date; $("eventTitle").value = event?.title || "";
     $("eventCategory").value = normalizeCategory(event?.category); $("allDay").checked = event?.allDay === true; $("startTime").value = event?.startTime || ""; $("endTime").value = event?.endTime || ""; $("eventPlace").value = event?.place || ""; $("eventNote").value = event?.note || ""; updateTimeFields();
+    pickerYear = new Date(`${event?.date || date}T00:00:00`).getFullYear(); pickerMonth = new Date(`${event?.date || date}T00:00:00`).getMonth();
+    $("multipleDates").checked = false; $("multiDateOption").hidden = Boolean(event); $("multiDatePanel").hidden = true; $("eventDateLabel").textContent = "日付";
     $("dialogTitle").textContent = event ? "予定を編集" : "予定を追加"; $("deleteEventButton").hidden = !event; $("eventDialog").showModal(); setTimeout(() => $("eventTitle").focus(), 50);
   }
   function saveEvent() {
     const allDay = $("allDay").checked;
-    const data = { id: $("eventId").value || uid(), date: $("eventDate").value, category: $("eventCategory").value, title: $("eventTitle").value.trim(), allDay, startTime: allDay ? "" : $("startTime").value, endTime: allDay ? "" : $("endTime").value, place: $("eventPlace").value.trim(), note: $("eventNote").value.trim() };
-    const index = state.events.findIndex(item => item.id === data.id); if (index >= 0) state.events[index] = data; else state.events.push(data);
-    const selected = new Date(`${data.date}T00:00:00`); state.year = selected.getFullYear(); state.month = selected.getMonth(); $("eventDialog").close(); render(); toast(index >= 0 ? "予定を更新しました" : "予定を追加しました");
+    const id = $("eventId").value; const common = { category: $("eventCategory").value, title: $("eventTitle").value.trim(), allDay, startTime: allDay ? "" : $("startTime").value, endTime: allDay ? "" : $("endTime").value, place: $("eventPlace").value.trim(), note: $("eventNote").value.trim() };
+    let dates = id ? [$("eventDate").value] : $("multipleDates").checked ? sortedSelectedDates() : [$("eventDate").value];
+    if (!dates.length) { alert("登録する日付を1日以上選択してください。"); return; }
+    if (id) { const index = state.events.findIndex(item => item.id === id); state.events[index] = { id, date: dates[0], ...common }; }
+    else dates.forEach(date => state.events.push({ id: uid(), date, ...common }));
+    const selected = new Date(`${dates[0]}T00:00:00`); state.year = selected.getFullYear(); state.month = selected.getMonth(); $("eventDialog").close(); render(); toast(id ? "予定を更新しました" : dates.length > 1 ? `${dates.length}日分の予定を追加しました` : "予定を追加しました");
   }
   function updateTimeFields() {
     const disabled = $("allDay").checked;
@@ -175,6 +226,13 @@
     $("footerNote").oninput = e => { state.footerNote = e.target.textContent; save(); };
     $("closeDialog").onclick = $("cancelButton").onclick = () => $("eventDialog").close();
     $("allDay").onchange = updateTimeFields;
+    $("multipleDates").onchange = updateMultipleDatesMode;
+    $("eventDate").onchange = e => { if (!e.target.value) return; const date = new Date(`${e.target.value}T00:00:00`); pickerYear = date.getFullYear(); pickerMonth = date.getMonth(); if (!$("multipleDates").checked) return; selectedDates.add(e.target.value); renderMultiCalendar(); };
+    $("multiPrevMonth").onclick = () => { pickerMonth--; if (pickerMonth < 0) { pickerMonth = 11; pickerYear--; } renderMultiCalendar(); };
+    $("multiNextMonth").onclick = () => { pickerMonth++; if (pickerMonth > 11) { pickerMonth = 0; pickerYear++; } renderMultiCalendar(); };
+    document.querySelectorAll("[data-weekday]").forEach(button => button.onclick = () => toggleDatesByWeekdays([Number(button.dataset.weekday)]));
+    $("selectWeekdays").onclick = () => toggleDatesByWeekdays([1,2,3,4,5]); $("addRange").onclick = addDateRange;
+    $("clearDates").onclick = () => { selectedDates.clear(); renderMultiCalendar(); };
     $("eventForm").addEventListener("submit", e => { e.preventDefault(); saveEvent(); }); $("deleteEventButton").onclick = deleteEvent;
     $("exportButton").onclick = exportData; $("importInput").onchange = e => e.target.files[0] && importData(e.target.files[0]);
     $("clearButton").onclick = () => { if (confirm("すべての予定を削除しますか？この操作は元に戻せません。")) { state.events = []; render(); toast("予定をすべて削除しました"); } };
