@@ -88,6 +88,7 @@ button { cursor: pointer; }
 .empty-state { padding: 50px 20px; color: var(--muted); text-align: center; }
 .paper-footer { display: flex; justify-content: space-between; gap: 20px; margin-top: 18px; color: var(--muted); font-size: 12px; }
 .paper-footer p { margin: 0; }
+#updatedAt { margin-left: auto; }
 dialog { width: min(720px, calc(100vw - 28px)); max-height: calc(100vh - 28px); padding: 0; border: 0; border-radius: 16px; box-shadow: 0 30px 100px rgba(7,26,50,.35); }
 dialog::backdrop { background: rgba(7,26,50,.58); backdrop-filter: blur(2px); }
 #eventForm { padding: 24px; }

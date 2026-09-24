@@ -6,8 +6,8 @@
   const initial = new Date();
   const state = {
     year: initial.getFullYear(), month: initial.getMonth(), view: "calendar",
-    settings: { showHolidayNames: true, showEmpty: true },
-    clubName: "吹奏楽部 活動予定表", footerNote: "※予定は変更になる場合があります。最新の連絡を確認してください。", events: []
+    settings: { showHolidayNames: true, showEmpty: true, showUpdatedAt: true },
+    clubName: "吹奏楽部 活動予定表", events: []
   };
   const selectedDates = new Set();
   let pickerYear = initial.getFullYear();
@@ -60,7 +60,7 @@
         const decoded = JSON.parse(decodeURIComponent(escape(atob(shared))));
         if (Array.isArray(decoded.events)) {
           state.events = decoded.events; state.year = decoded.year; state.month = decoded.month;
-          state.clubName = decoded.clubName || state.clubName; state.footerNote = decoded.footerNote || state.footerNote;
+          state.clubName = decoded.clubName || state.clubName;
           toast("共有された予定表を読み込みました");
         }
       }
@@ -80,7 +80,10 @@
   }
   function visibleDays() { return dayLabels.map((label, index) => ({ label, index })); }
   function render() {
-    $("clubName").value = state.clubName; $("footerNote").textContent = state.footerNote;
+    $("clubName").value = state.clubName;
+    document.title = scheduleFileName();
+    $("showUpdatedAt").checked = state.settings.showUpdatedAt;
+    $("paperFooter").hidden = !state.settings.showUpdatedAt;
     delete state.settings.showSunday; delete state.settings.showSaturday;
     $("showHolidayNames").checked = state.settings.showHolidayNames; $("showEmpty").checked = state.settings.showEmpty;
     const monthText = `${state.year}年 ${state.month + 1}月`;
@@ -191,19 +194,21 @@
     document.querySelectorAll(".time-field").forEach(label => label.classList.toggle("disabled", disabled));
   }
   function deleteEvent() { const id = $("eventId").value; state.events = state.events.filter(item => item.id !== id); $("eventDialog").close(); render(); toast("予定を削除しました"); }
-  function exportData() { const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `活動予定表-${state.year}-${String(state.month + 1).padStart(2,"0")}.json`; link.click(); URL.revokeObjectURL(url); toast("データを書き出しました"); }
+  function scheduleFileName() { return `吹奏楽部${state.month + 1}月予定表`; }
+  function exportData() { const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${scheduleFileName()}.json`; link.click(); URL.revokeObjectURL(url); toast("データを書き出しました"); }
   function importData(file) { const reader = new FileReader(); reader.onload = () => { try { const data = JSON.parse(reader.result); if (!Array.isArray(data.events)) throw new Error(); Object.assign(state, data, { settings: { ...state.settings, ...(data.settings || {}) } }); state.events = state.events.map(event => ({ ...event, category: normalizeCategory(event.category), allDay: event.allDay === true })); render(); toast("データを読み込みました"); } catch { alert("このファイルは読み込めませんでした。"); } }; reader.readAsText(file); }
   async function share() {
     const monthEvents = state.events.filter(e => { const d = new Date(`${e.date}T00:00:00`); return d.getFullYear() === state.year && d.getMonth() === state.month; });
-    const payload = { year: state.year, month: state.month, clubName: state.clubName, footerNote: state.footerNote, events: monthEvents };
+    const payload = { year: state.year, month: state.month, clubName: state.clubName, events: monthEvents };
     const data = btoa(unescape(encodeURIComponent(JSON.stringify(payload)))); const url = `${location.origin}${location.pathname}#data=${encodeURIComponent(data)}`;
     try { await navigator.clipboard.writeText(url); toast("共有リンクをコピーしました"); } catch { prompt("このリンクをコピーしてください", url); }
   }
-  function printSchedule() {
+  function preparePrint() {
+    document.title = scheduleFileName();
     let style = $("printPageStyle"); if (!style) { style = document.createElement("style"); style.id = "printPageStyle"; document.head.append(style); }
     style.textContent = `@page { size: A4 ${state.view === "list" ? "portrait" : "landscape"}; margin: 7mm; }`;
-    window.print();
   }
+  function printSchedule() { preparePrint(); window.print(); }
   function bind() {
     $("prevMonth").onclick = () => { state.month--; if (state.month < 0) { state.month = 11; state.year--; } render(); };
     $("nextMonth").onclick = () => { state.month++; if (state.month > 11) { state.month = 0; state.year++; } render(); };
@@ -212,9 +217,9 @@
     $("monthPicker").onchange = (e) => { const [year, month] = e.target.value.split("-").map(Number); state.year = year; state.month = month - 1; render(); };
     $("addEventButton").onclick = () => openDialog(); $("printButton").onclick = printSchedule; $("shareButton").onclick = share;
     document.querySelectorAll("[data-view]").forEach(btn => btn.onclick = () => { state.view = btn.dataset.view; render(); });
-    ["showHolidayNames","showEmpty"].forEach(id => $(id).onchange = e => { state.settings[id] = e.target.checked; render(); });
+    ["showHolidayNames","showEmpty","showUpdatedAt"].forEach(id => $(id).onchange = e => { state.settings[id] = e.target.checked; render(); });
     $("clubName").oninput = e => { state.clubName = e.target.value; parseClubName(); save(); };
-    $("footerNote").oninput = e => { state.footerNote = e.target.textContent; save(); };
+    window.addEventListener("beforeprint", preparePrint);
     $("closeDialog").onclick = $("cancelButton").onclick = () => $("eventDialog").close();
     $("allDay").onchange = updateTimeFields;
     $("multipleDates").onchange = updateMultipleDatesMode;
