@@ -6,7 +6,7 @@
   const initial = new Date();
   const state = {
     year: initial.getFullYear(), month: initial.getMonth(), view: "calendar",
-    settings: { showSunday: true, showSaturday: true, showHolidayNames: true, showEmpty: true },
+    settings: { showHolidayNames: true, showEmpty: true },
     clubName: "吹奏楽部 活動予定表", footerNote: "※予定は変更になる場合があります。最新の連絡を確認してください。", events: []
   };
   const selectedDates = new Set();
@@ -78,10 +78,11 @@
     $("printSchool").textContent = marker > 0 ? name.slice(0, marker) : "吹奏楽部";
     $("printTitle").textContent = marker > 0 ? name.slice(marker + 1) : name;
   }
-  function visibleDays() { return dayLabels.map((label, index) => ({ label, index })).filter(d => state.settings.showSunday || d.index !== 0).filter(d => state.settings.showSaturday || d.index !== 6); }
+  function visibleDays() { return dayLabels.map((label, index) => ({ label, index })); }
   function render() {
     $("clubName").value = state.clubName; $("footerNote").textContent = state.footerNote;
-    $("showSunday").checked = state.settings.showSunday; $("showSaturday").checked = state.settings.showSaturday; $("showHolidayNames").checked = state.settings.showHolidayNames; $("showEmpty").checked = state.settings.showEmpty;
+    delete state.settings.showSunday; delete state.settings.showSaturday;
+    $("showHolidayNames").checked = state.settings.showHolidayNames; $("showEmpty").checked = state.settings.showEmpty;
     const monthText = `${state.year}年 ${state.month + 1}月`;
     $("monthLabel").textContent = monthText; $("paperMonth").textContent = monthText; $("monthPicker").value = `${state.year}-${String(state.month + 1).padStart(2, "0")}`;
     parseClubName(); renderCalendar(); renderList(); document.body.classList.toggle("list-mode", state.view === "list");
@@ -120,7 +121,7 @@
     const lastDay = new Date(state.year, state.month + 1, 0).getDate(); let shown = 0;
     for (let day = 1; day <= lastDay; day++) {
       const date = new Date(state.year, state.month, day); const dow = date.getDay(); const key = dateKey(date); const events = eventsFor(key);
-      if ((!state.settings.showSunday && dow === 0) || (!state.settings.showSaturday && dow === 6) || (!state.settings.showEmpty && events.length === 0)) continue;
+      if (!state.settings.showEmpty && events.length === 0 && dow !== 0 && dow !== 6) continue;
       const rows = events.length ? events : [{ id: null, title: "", startTime: "", endTime: "", allDay: false, place: "", note: "", category: "practice" }];
       rows.forEach((event, index) => {
         const holidayName = holidays.get(key); const dayClass = holidayName || dow === 0 ? "holiday" : dow === 6 ? "saturday" : "";
@@ -211,7 +212,7 @@
     $("monthPicker").onchange = (e) => { const [year, month] = e.target.value.split("-").map(Number); state.year = year; state.month = month - 1; render(); };
     $("addEventButton").onclick = () => openDialog(); $("printButton").onclick = printSchedule; $("shareButton").onclick = share;
     document.querySelectorAll("[data-view]").forEach(btn => btn.onclick = () => { state.view = btn.dataset.view; render(); });
-    ["showSunday","showSaturday","showHolidayNames","showEmpty"].forEach(id => $(id).onchange = e => { state.settings[id] = e.target.checked; render(); });
+    ["showHolidayNames","showEmpty"].forEach(id => $(id).onchange = e => { state.settings[id] = e.target.checked; render(); });
     $("clubName").oninput = e => { state.clubName = e.target.value; parseClubName(); save(); };
     $("footerNote").oninput = e => { state.footerNote = e.target.textContent; save(); };
     $("closeDialog").onclick = $("cancelButton").onclick = () => $("eventDialog").close();
