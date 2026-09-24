@@ -167,16 +167,6 @@
     if (enabled && !selectedDates.size && $("eventDate").value) selectedDates.add($("eventDate").value);
     if (enabled) renderMultiCalendar();
   }
-  function addDateRange() {
-    const startKey = $("rangeStart").value; const endKey = $("rangeEnd").value;
-    if (!startKey || !endKey) { alert("開始日と終了日を選択してください。"); return; }
-    const start = new Date(`${startKey}T00:00:00`); const end = new Date(`${endKey}T00:00:00`);
-    if (start > end) { alert("終了日は開始日以降にしてください。"); return; }
-    if ((end - start) / 86400000 >= 366) { alert("期間は366日以内で選択してください。"); return; }
-    const cursor = new Date(start); let count = 0;
-    while (cursor <= end && count < 366) { selectedDates.add(dateKey(cursor)); cursor.setDate(cursor.getDate() + 1); count++; }
-    pickerYear = start.getFullYear(); pickerMonth = start.getMonth(); renderMultiCalendar();
-  }
   function openDialog(date = dateKey(new Date(state.year, state.month, 1)), id = null) {
     const event = state.events.find(item => item.id === id);
     $("eventForm").reset(); selectedDates.clear(); $("eventId").value = event?.id || ""; $("eventDate").value = event?.date || date; $("eventTitle").value = event?.title || "";
@@ -231,7 +221,6 @@
     $("multiPrevMonth").onclick = () => { pickerMonth--; if (pickerMonth < 0) { pickerMonth = 11; pickerYear--; } renderMultiCalendar(); };
     $("multiNextMonth").onclick = () => { pickerMonth++; if (pickerMonth > 11) { pickerMonth = 0; pickerYear++; } renderMultiCalendar(); };
     document.querySelectorAll("[data-weekday]").forEach(button => button.onclick = () => toggleDatesByWeekdays([Number(button.dataset.weekday)]));
-    $("selectWeekdays").onclick = () => toggleDatesByWeekdays([1,2,3,4,5]); $("addRange").onclick = addDateRange;
     $("clearDates").onclick = () => { selectedDates.clear(); renderMultiCalendar(); };
     $("eventForm").addEventListener("submit", e => { e.preventDefault(); saveEvent(); }); $("deleteEventButton").onclick = deleteEvent;
     $("exportButton").onclick = exportData; $("importInput").onchange = e => e.target.files[0] && importData(e.target.files[0]);
