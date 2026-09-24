@@ -126,13 +126,13 @@ dialog::backdrop { background: rgba(7,26,50,.58); backdrop-filter: blur(2px); }
 .dialog-actions .ghost { color: var(--navy); border-color: var(--line); background: white; }
 .toast { position: fixed; left: 50%; bottom: 24px; z-index: 10; padding: 12px 18px; color: white; background: #17243a; border-radius: 10px; box-shadow: var(--shadow); opacity: 0; transform: translate(-50%, 15px); pointer-events: none; transition: .2s ease; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
-@media (max-width: 980px) {
+@media screen and (max-width: 980px) {
   .topbar { height: auto; padding: 16px 20px; }.top-actions .ghost { display: none; }
   .control-band { align-items: stretch; flex-direction: column; padding: 14px 20px; }.control-band > div { justify-content: space-between; }
   .workspace { grid-template-columns: 1fr; padding: 18px 14px 30px; }.sidebar { display: grid; grid-template-columns: repeat(3, 1fr); }.save-note { display: none; }
   .calendar-paper { padding: 18px; }.day-cell { min-height: 102px; }.event-chip { font-size: 11px; }
 }
-@media (max-width: 680px) {
+@media screen and (max-width: 680px) {
   .brand-mark { width: 42px; height: 42px; }.club-name { width: 62vw; font-size: 17px; }.top-actions { display: none; }
   .view-actions { flex-wrap: wrap; }.view-actions .button.add { flex: 1; }.sidebar { grid-template-columns: 1fr; }
   .calendar-paper { overflow-x: auto; }.paper-head { min-width: 650px; }.calendar-view, .list-view, .paper-footer { min-width: 650px; }
@@ -144,16 +144,23 @@ dialog::backdrop { background: rgba(7,26,50,.58); backdrop-filter: blur(2px); }
   body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .topbar, .control-band, .no-print, dialog, .toast { display: none !important; }
   .workspace { display: block; max-width: none; margin: 0; padding: 0; }
-  .calendar-paper { padding: 0; border-radius: 0; box-shadow: none; }
+  .app-shell { min-height: 0; }
+  .calendar-paper { width: 100%; min-width: 0; max-width: 100%; overflow: visible; padding: 0; border-radius: 0; box-shadow: none; }
+  .paper-head, .calendar-view, .list-view, .paper-footer { width: 100%; min-width: 0; max-width: 100%; }
+  .paper-head > div { min-width: 0; overflow-wrap: anywhere; }
+  .paper-month { flex-shrink: 0; }
+  .paper-footer { flex-wrap: wrap; }
+  .paper-footer p { min-width: 0; overflow-wrap: anywhere; }
   .paper-head { padding-bottom: 10px; }.paper-head h1 { font-size: 22px; }.paper-month { font-size: 25px; }
   .day-cell { min-height: 85px; padding: 5px; }.weekday { min-height: 28px; }.event-chip { margin-top: 2px; padding: 3px 4px; font-size: 10px; }
   .add-mini { display: none !important; }.paper-footer { margin-top: 9px; }
   body.list-mode .paper-head { padding-bottom: 4px; }
   body.list-mode .paper-head h1 { font-size: 19px; }
   body.list-mode .paper-month { font-size: 20px; }
-  body.list-mode .list-row { grid-template-columns: 92px 76px minmax(120px,1.45fr) minmax(72px,.8fr) minmax(90px,1fr); break-inside: avoid; page-break-inside: avoid; }
+  body.list-mode .list-row { grid-template-columns: 16% 14% 32% 18% 20%; break-inside: avoid; page-break-inside: avoid; }
+  body.list-mode .list-row > div, body.list-mode .list-title-button { min-width: 0; overflow-wrap: anywhere; }
   body.list-mode .list-row > div { min-height: 20px; padding: 1px 4px; font-size: 9px; line-height: 1.05; }
-  body.list-mode .list-date { flex-direction: row; align-items: center !important; gap: 3px; white-space: nowrap; }
+  body.list-mode .list-date { flex-direction: row; flex-wrap: wrap; align-items: center !important; gap: 3px; white-space: nowrap; }
   body.list-mode .list-date small, body.list-mode .list-date .holiday-name { margin: 0; font-size: 8px; white-space: nowrap; }
   body.list-mode .paper-footer { margin-top: 4px; font-size: 8px; }
 }
